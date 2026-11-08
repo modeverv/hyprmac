@@ -14,6 +14,7 @@ if arguments.contains("--help") || arguments.contains("-h") {
 
       hyprmac                       run (menu bar app)
       hyprmac --config PATH         use another config file
+      hyprmac --settings [TAB]      open only the settings window (general|binds|rules|startup)
       hyprmac --check-config [PATH] validate a config and exit
       hyprmac --print-default-config
     """)
@@ -31,6 +32,19 @@ if arguments.contains("--check-config") {
     print("\(store.url.path): \(config.binds.count) binds, \(config.rules.count) rules, gaps_in=\(config.gapsIn) gaps_out=\(config.gapsOut)")
     for e in config.errors { print("error: \(e)") }
     exit(config.errors.isEmpty ? 0 : 1)
+}
+
+if arguments.contains("--settings") {
+    // Settings window only: no window management, no Accessibility prompt.
+    MainActor.assumeIsolated {
+        let app = NSApplication.shared
+        let delegate = SettingsOnlyDelegate(configPath: argumentValue("--config"),
+                                            tab: argumentValue("--settings").flatMap { $0.hasPrefix("-") ? nil : $0 })
+        app.delegate = delegate
+        app.setActivationPolicy(.regular)
+        withExtendedLifetime(delegate) { app.run() }
+    }
+    exit(0)
 }
 
 MainActor.assumeIsolated {

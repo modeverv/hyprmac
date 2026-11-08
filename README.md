@@ -1,5 +1,7 @@
 # HyprMac — macOS 向け Hyprland 風タイリングウィンドウマネージャ
 
+<img src="Resources/AppIcon.png" width="128" alt="HyprMac のアイコン">
+
 動画「Why you should try Linux in 2027」(https://www.youtube.com/watch?v=mfyzIdSDWNM) で紹介されていた
 Omarchy(Hyprland)のワークフローを macOS で再現するメニューバー常駐アプリです。
 
@@ -22,6 +24,7 @@ make app          # → build/HyprMac.app
 make run          # ビルドしてフォアグラウンドで起動(ログは stderr、Ctrl-C で終了しウィンドウを元に戻す)
 make install      # /Applications にコピー
 make test         # レイアウトツリーと設定パーサのユニットテスト
+make icon         # アイコン(Resources/AppIcon.icns)を scripts/make-icon.swift から再生成
 ```
 
 初回起動時に **システム設定 → プライバシーとセキュリティ → アクセシビリティ** で HyprMac を許可してください。
@@ -53,7 +56,22 @@ ad-hoc 署名のため、**再ビルドするたびに許可し直す必要が�
 使われていて、HyprMac が横取りしてしまうためです。
 動画と同じキーにしたい場合は設定で `$mod = SUPER`(= Command)に変更してください。
 
-## 設定
+## 設定画面(GUI)
+
+メニューバーの HyprMac アイコン →「設定…」(または ⌘,)で設定画面が開きます。
+`HyprMac --settings` で設定画面だけを単独で開くこともできます(ウィンドウ管理は行いません)。
+
+| タブ | 内容 |
+|---|---|
+| 一般 | 修飾キー `$mod` の選択、gaps_in / gaps_out、special workspace の大きさ、変数(`$terminal` など) |
+| キー割り当て | 修飾キー・キー・動作・引数の編集、追加と削除、検索。⌨︎ ボタンを押してからキーを押すと組み合わせを記録できる。重複したキーには ⚠︎ を表示 |
+| ウィンドウルール | フローティング / タイル / ワークスペース指定のルール。「実行中のアプリから追加」でアプリ名を正規表現に変換して追加 |
+| 起動時コマンド | `exec-once` の編集 |
+
+入力内容はその場で検証され、エラーがあると「保存して適用」は押せません。
+保存すると設定ファイルを書き直してすぐに反映します(ファイル内のコメントは保持されません)。
+
+## 設定ファイル
 
 初回起動時に `~/.config/hyprmac/hyprmac.conf` が作成されます。**保存すると自動で再読み込み** されます。
 
@@ -89,8 +107,8 @@ bind = $mod, 1, workspace, 1
 - 終了時(メニュー、Ctrl-C、SIGTERM)や「Pause Tiling」選択時は、隠れていたウィンドウをすべて画面内に戻す
 
 ```
-Sources/HyprMacCore/   純粋なロジック(Dwindle ツリー、設定パーサ、方向探索)+ テスト
-Sources/HyprMac/       AppKit/AX 層(WindowManager、KeyboardTap、StatusBar)
+Sources/HyprMacCore/   純粋なロジック(Dwindle ツリー、設定パーサ / ConfigDocument、方向探索)+ テスト
+Sources/HyprMac/       AppKit/AX 層(WindowManager、KeyboardTap、StatusBar)と SwiftUI の設定画面
 ```
 
 ## 制限と注意

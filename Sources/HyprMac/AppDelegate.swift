@@ -9,6 +9,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private let wm: WindowManager
     private let keyboard = KeyboardTap()
     private var statusBar: StatusBar!
+    private lazy var settingsModel = SettingsModel(store: store)
+    private lazy var settingsWindow = SettingsWindowController(model: settingsModel)
     private var paused = false
     private var pollTimer: Timer?
     private var signalSources: [DispatchSourceSignal] = []
@@ -28,6 +30,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             NSWorkspace.shared.open(self.store.url)
         }
         statusBar.onTogglePause = { [weak self] in self?.togglePause() }
+        statusBar.onSettings = { [weak self] in self?.settingsWindow.show() }
         statusBar.onWorkspace = { [weak self] n in self?.wm.switchWorkspace(n) }
         statusBar.onToggleSpecial = { [weak self] in self?.wm.toggleSpecial() }
 
@@ -35,6 +38,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         wm.onReloadRequest = { [weak self] in self?.reloadConfig() }
         keyboard.onBind = { [weak self] bind in self?.wm.dispatch(bind.dispatcher, bind.argument) }
         keyboard.setBinds(config.binds)
+        settingsModel.onSaved = { [weak self] in self?.reloadConfig() }
+        settingsModel.onRecordingChanged = { [weak self] recording in
+            guard let self else { return }
+            // Let the settings window see combos that are currently bound.
+            self.keyboard.setBinds(recording || self.paused ? [] : self.config.binds)
+        }
+        installMainMenu()
 
         for e in config.errors { log("config: \(e)") }
         installSignalHandlers()
@@ -99,6 +109,35 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         statusBar?.update(snapshot: wm.enabled ? wm.snapshot() : nil, paused: paused,
                           trusted: AXIsProcessTrusted(), configErrors: config.errors, configPath: store.url.path)
     }
+
+    /// An accessory app has no menu bar, but text fields need Edit-menu shortcuts (⌘C/⌘V/⌘Z...).
+    private func installMainMenu() {
+        let main = NSMenu()
+        let appItem = NSMenuItem()
+        let appMenu = NSMenu()
+        appMenu.addItem(withTitle: "設定…", action: #selector(openSettings), keyEquivalent: ",").target = self
+        appMenu.addItem(withTitle: "ウィンドウを閉じる", action: #selector(NSWindow.performClose(_:)), keyEquivalent: "w")
+        appMenu.addItem(.separator())
+        appMenu.addItem(withTitle: "HyprMac を終了", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
+        appItem.submenu = appMenu
+        main.addItem(appItem)
+
+        let editItem = NSMenuItem()
+        let edit = NSMenu(title: "編集")
+        edit.addItem(withTitle: "取り消す", action: Selector(("undo:")), keyEquivalent: "z")
+        let redo = edit.addItem(withTitle: "やり直す", action: Selector(("redo:")), keyEquivalent: "z")
+        redo.keyEquivalentModifierMask = [.command, .shift]
+        edit.addItem(.separator())
+        edit.addItem(withTitle: "カット", action: #selector(NSText.cut(_:)), keyEquivalent: "x")
+        edit.addItem(withTitle: "コピー", action: #selector(NSText.copy(_:)), keyEquivalent: "c")
+        edit.addItem(withTitle: "ペースト", action: #selector(NSText.paste(_:)), keyEquivalent: "v")
+        edit.addItem(withTitle: "すべてを選択", action: #selector(NSText.selectAll(_:)), keyEquivalent: "a")
+        editItem.submenu = edit
+        main.addItem(editItem)
+        NSApp.mainMenu = main
+    }
+
+    @objc private func openSettings() { settingsWindow.show() }
 
     /// Ctrl-C / kill must not leave windows parked off-screen.
     private func installSignalHandlers() {

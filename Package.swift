@@ -17,6 +17,7 @@ let package = Package(
             linkerSettings: [
                 .linkedFramework("AppKit"),
                 .linkedFramework("ApplicationServices"),
+                .linkedFramework("SwiftUI"),
             ]
         ),
         .testTarget(name: "HyprMacCoreTests", dependencies: ["HyprMacCore"]),

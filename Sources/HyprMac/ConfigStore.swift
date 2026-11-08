@@ -28,6 +28,16 @@ final class ConfigStore {
         return HyprConfig.parse(text)
     }
 
+    func readText() -> String? {
+        ensureExists()
+        return try? String(contentsOf: url, encoding: .utf8)
+    }
+
+    func write(_ text: String) throws {
+        try FileManager.default.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
+        try text.write(to: url, atomically: true, encoding: .utf8)
+    }
+
     /// True when the file changed since the last load.
     func hasChanged() -> Bool {
         let m = modificationDate()

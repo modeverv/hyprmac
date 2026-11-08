@@ -2,7 +2,7 @@ CLT_FW := /Library/Developer/CommandLineTools/Library/Developer/Frameworks
 CLT_LIB := /Library/Developer/CommandLineTools/Library/Developer/usr/lib
 TEST_FLAGS := $(if $(wildcard $(CLT_FW)/Testing.framework),-Xswiftc -F -Xswiftc $(CLT_FW) -Xlinker -F -Xlinker $(CLT_FW) -Xlinker -rpath -Xlinker $(CLT_FW) -Xlinker -rpath -Xlinker $(CLT_LIB))
 
-.PHONY: build app test run install clean
+.PHONY: build app test run install clean icon
 
 build:
 	swift build --build-system native
@@ -20,6 +20,9 @@ install: app
 	rm -rf /Applications/HyprMac.app
 	cp -R build/HyprMac.app /Applications/
 	@echo "installed /Applications/HyprMac.app"
+
+icon:
+	./scripts/make-icns.sh
 
 clean:
 	rm -rf .build build

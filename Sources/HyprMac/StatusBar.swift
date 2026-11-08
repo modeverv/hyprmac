@@ -11,6 +11,7 @@ final class StatusBar: NSObject {
     var onTogglePause: (() -> Void)?
     var onWorkspace: ((Int) -> Void)?
     var onToggleSpecial: (() -> Void)?
+    var onSettings: (() -> Void)?
 
     override init() {
         super.init()
@@ -64,27 +65,30 @@ final class StatusBar: NSObject {
     private func rebuildMenu(snapshot s: StatusSnapshot?, paused: Bool, trusted: Bool, configErrors: [String], configPath: String) {
         menu.removeAllItems()
         if !trusted {
-            menu.addItem(action("Grant Accessibility Permission…", #selector(openAccessibility)))
+            menu.addItem(action("アクセシビリティを許可…", #selector(openAccessibility)))
             menu.addItem(.separator())
         }
         if let s, !paused {
             for n in s.occupiedWorkspaces.union([s.focusedWorkspace]).sorted() {
-                let mi = action("Workspace \(n)", #selector(goWorkspace(_:)))
+                let mi = action("ワークスペース \(n)", #selector(goWorkspace(_:)))
                 mi.tag = n
                 mi.state = n == s.focusedWorkspace ? .on : .off
                 menu.addItem(mi)
             }
-            let special = action(s.specialShown ? "Hide Special Workspace" : "Show Special Workspace", #selector(toggleSpecial))
+            let special = action(s.specialShown ? "Special workspace を隠す" : "Special workspace を表示", #selector(toggleSpecial))
             menu.addItem(special)
             menu.addItem(.separator())
         }
-        menu.addItem(action("Reload Config", #selector(reload)))
-        menu.addItem(action("Open Config", #selector(openConfig)))
+        let settings = action("設定…", #selector(openSettings))
+        settings.keyEquivalent = ","
+        menu.addItem(settings)
+        menu.addItem(action("設定を再読み込み", #selector(reload)))
+        menu.addItem(action("設定ファイルを開く", #selector(openConfig)))
         let pathItem = NSMenuItem(title: configPath, action: nil, keyEquivalent: "")
         pathItem.isEnabled = false
         menu.addItem(pathItem)
         if !configErrors.isEmpty {
-            let errItem = NSMenuItem(title: "Config errors (\(configErrors.count))", action: nil, keyEquivalent: "")
+            let errItem = NSMenuItem(title: "設定エラー (\(configErrors.count))", action: nil, keyEquivalent: "")
             let sub = NSMenu()
             for e in configErrors.prefix(30) {
                 let i = NSMenuItem(title: e, action: nil, keyEquivalent: "")
@@ -95,9 +99,9 @@ final class StatusBar: NSObject {
             menu.addItem(errItem)
         }
         menu.addItem(.separator())
-        menu.addItem(action(paused ? "Resume Tiling" : "Pause Tiling (restore windows)", #selector(togglePause)))
+        menu.addItem(action(paused ? "タイリングを再開" : "タイリングを一時停止(ウィンドウを戻す)", #selector(togglePause)))
         menu.addItem(.separator())
-        let quit = NSMenuItem(title: "Quit HyprMac", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
+        let quit = NSMenuItem(title: "HyprMac を終了", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
         menu.addItem(quit)
     }
 
@@ -109,6 +113,7 @@ final class StatusBar: NSObject {
 
     @objc private func reload() { onReload?() }
     @objc private func openConfig() { onOpenConfig?() }
+    @objc private func openSettings() { onSettings?() }
     @objc private func togglePause() { onTogglePause?() }
     @objc private func toggleSpecial() { onToggleSpecial?() }
     @objc private func goWorkspace(_ sender: NSMenuItem) { onWorkspace?(sender.tag) }
